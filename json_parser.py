@@ -36,13 +36,28 @@ def is_valid_json(data):
 
     return isValid
 
-def parse_json(data):
+def parse_json_to_dictionary(data):
 
-    if len(data) == 2: # empty json file return curly braces
-        return data
-    else:
-        for d in data:
-            print(d)
+    if data.strip() == "{}":
+        return dict()
+
+    json_dict = dict()
+    clean_data_list = ((data[1:-1]
+                       .replace(":", "")
+                       .replace(",", "")
+                       .replace('"', "")
+                       .replace("{", ""))
+                       .replace("}", "")
+                       .split())
+
+    for index, d in  enumerate(clean_data_list):
+        if index % 2 == 0:
+            continue
+
+        key = clean_data_list[index-1].strip()
+        json_dict[key] = d.strip()
+
+    return json_dict
 
 def main():
 
@@ -52,10 +67,10 @@ def main():
         json_data = f.read()
 
         if not is_valid_json(json_data):
-            print(0)
+            print(1)
         else:
-            print(1, "\nworks so far")
-
+            print(0)
+            print(parse_json_to_dictionary(json_data))
 
 if __name__ == "__main__":
 
