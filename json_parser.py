@@ -1,106 +1,98 @@
 import sys
 
-def clean_data(data):
-    return ((data
-             .replace(":", "")
-             .replace(",", "")
-             .replace('"', "")
-             .replace("{", ""))
-             .replace("}", ""))
+def clean_data(json_file):
+    clean_list = list() # declare new clean list
 
-def check_if_is_valid(data):
-    data = clean_data(data)
+    with open(json_file, 'r') as f: # read json file
+        json_data = f.read().strip() # strip json data of leading and trailing spaces
 
-    if data in {'true', 'false', 'null'}:
-        return True
+        data_list = json_data[1:-1].split('"') # remove json curly braces and split list based on "
 
-    return True if data.isdigit() else False
+        for data in data_list:  # Loop to create cleaned list
 
+            # Data clean up removing spaces, commas, colons and returns
+            data = data.strip(" ,:\n")
+            if data == "":
+                continue
+            clean_list.append(data)
 
-def is_valid_json(data):
-    isValid = False
-    data = data.strip() # Removed extra spaces
+    return clean_list
 
-    if data == "": # check if file empty
-        isValid = False
-    elif data[0] == "{" and data[-1] == "}":
-        d_list = data[1:-1].split() # Remove curly braces and create list
+def list_value(data_list):
 
-        if not d_list: # if file empty json return true
-            return True
+    if "[" in data_list:
+        x = data_list.index("]") # get index of the end of the dict
+        sub_list = data_list[data_list.index("[") + 1: x] # create sublist of items in the dictionary
 
-        for index, d in enumerate(d_list):
-            l = len(d)
+        value = list() # declare new dictionary
+        for data in sub_list: # loop through sublist and add items to new dictionary
+            value.append(data) # add key value to dictionary
 
-            if d[:1] != '"': #checks to see if key value pair start with double quotes
-                isValid = False
+        while True: # Loop in reverse to recreate the list
+            if data_list[x] == "[": # check if back at the beginning of the dictionary
+                data_list[x] = value # replace with new dictionary created
+                break
 
-                if index % 2 != 0: # Handle values that are not string literals
-                    # if data is a valid type boolean, null, int
-                    if check_if_is_valid(d):
-                        if len(d_list) - 1 != index and d[-1] == ",": # Verify json format
-                            isValid = True
-                            continue
-                        elif len(d_list) - 1 == index:
-                            isValid = True
-                            continue
+            data_list.pop(x) # remove list items that are part of constructed dictionary
+            x -= 1
+    return data_list
 
-                if not isValid:
-                    break
-
-            if index % 2 == 0: # Check key format
-                if  d[l-2:l] == '":':
-                    isValid = True
-                else:
-                    isValid = False
-                    break
-            else: # Check value format
-                if index == len(d_list) -1 and d[-1] == '"':  # if last item no comma
-                    isValid = True
-                elif index != len(d_list) -1 and d[l-2:l] == '",': # if not last item check for comma
-                    isValid = True
-                else:
-                    isValid = False
-                    break
-
-    return isValid
-
-def parse_json_to_dictionary(data):
-
-    if data.strip() == "{}":
-        return dict()
-
-    json_dict = dict()
-    data_list = clean_data(data[1:-1]).split()
-
-    for index, d in  enumerate(data_list):
-        if index % 2 == 0:
+def create_dict(data_list):
+    value = dict()  # declare new dictionary
+    for index, data in enumerate(data_list):  # loop through sublist and add items to new dictionary
+        if index % 2 == 0:  # if loop on key skip to next item
             continue
 
-        key = data_list[index-1].strip()
-        value = d.strip()
+        # add key value to dictionary
+        if isinstance(data, str) and data.isdigit():
+            value[data_list[index - 1]] = int(data)
+        elif data == "true":
+            value[data_list[index - 1]] = True
+        elif data == "false":
+            value[data_list[index - 1]] = False
+        elif data == "null":
+            value[data_list[index - 1]] = None
+        else:
+            value[data_list[index - 1]] = data
 
-        value = int(value) if value.isdigit() else value # is digit needs to get checked first
-        value = True if value == 'true' else value
-        value = False if value == 'false' else value
-        value = None if value == 'null' else value
+    return value
 
-        json_dict[key] = value
+# Reconstruct json value that is a dictionary
+def dict_value(data_list):
 
-    return json_dict
+    if "{" in data_list:
+        x = data_list.index("}") # get index of the end of the dict
+        sub_list = data_list[data_list.index("{") + 1: x] # create sublist of items in the dictionary
+
+        value = create_dict(sub_list)
+
+        while True: # Loop in reverse to recreate the list
+            if data_list[x] == "{": # check if back at the beginning of the dictionary
+                data_list[x] = value # replace with new dictionary created
+                break
+
+            data_list.pop(x) # remove list items that are part of constructed dictionary
+            x -= 1
+
+    return data_list
+
+
+
 
 def main():
 
-    json_file = sys.argv[1]
+    data_list = clean_data(sys.argv[1])
+    print(data_list)
+    data_list = dict_value(data_list)
+    data_list = list_value(data_list)
+    data_dict = create_dict(data_list)
 
-    with open(json_file, 'r') as f:
-        json_data = f.read()
+    print("--------------------------------------------------")
+    print(data_dict)
 
-        if not is_valid_json(json_data):
-            print(1)
-        else:
-            print(0)
-            print(parse_json_to_dictionary(json_data))
+
+
+
 
 if __name__ == "__main__":
 
