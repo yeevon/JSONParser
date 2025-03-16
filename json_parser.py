@@ -3,6 +3,7 @@ import sys
 
 # TODO: Future refactor to handle multiple dicts as values embedded inside dicts or list
 # TODO: Add validation to check for correct punctuation
+# TODO: code clean up
 
 def clean_data(json_file):
     clean_list = list() # declare new clean list
@@ -80,6 +81,15 @@ def convert_to_dict(data_list):
 
     return data_list
 
+
+def are_key_value_valid(d):
+    if d.count('"') != 2:  # Make sure each item has two " symbols
+        if d not in ['true', 'null', 'false']:  # Check if data is boolean or null
+            if not d.isdigit():  # check if data is digit
+                return False
+    return True
+
+
 def is_valid_json(data):
 
     is_valid = True
@@ -99,19 +109,71 @@ def is_valid_json(data):
             if jd[-2] != '"' and jd[-2] != '}' and jd[-2] != ']':
                 return False
 
-        jd_list = jd[1:-1].strip().strip(" ,:\n").split(' ') # Create list remove unneeded punctuation
+        jd_list = jd[1:-1].strip().split(' ') # Create list
 
+        # clean and rebuild list
+        sub_list = list()
         for d in jd_list:
             if d == "": # skip empty list item
                 continue
-            elif d.count('"') != 2: # Make sure each item has two " symbols
-                d = d.strip(" ,\n") # Clean data further
-                if d not in ['true', 'null', 'false']: # Check if data is boolean or null
-                    if not d.isdigit(): # check if data is digit
-                        return False
 
+            d = d.strip(" ,\n")  # Strip unneeded characters from data
+            sub_list.append(d)
+        jd_list = sub_list
+
+
+        for d in jd_list:
+            print("-------------------------------")
+            print(d)
+            if "{" in d: # Check if value is valid json
+                if d != "{}":  # Make sure json not empty
+                    x = jd_list.index("}")
+                    sub_data = " ".join(jd_list[jd_list.index(d):  x + 1]) # get json value and undo split
+                    sub_json = sub_data[1:-1].split(':')  # split based on semicolon
+
+                    for sub_d in sub_json: # step through json make sure values are valid
+                        if not are_key_value_valid(sub_d):
+                            return False
+
+                    # if json is valid remove already validated items from data list
+                    while True:
+                        if jd_list[x] != "{":
+                            jd_list.pop(x)
+                            x -= 1
+                        else:
+                            break
+
+            elif "[" in d: # Check if data is a valid list
+                if d != "[]":  # make sure list not empty
+                    x = [i for i, item in enumerate(jd_list) if "]" in item]
+
+                    start = jd_list.index(d)
+                    end = x[0]
+
+                    sub_data = " ".join(jd_list[start:  end + 1])  # get list value and undo split
+
+
+                    if "," in sub_data: # split and loop if multiple list items
+                        sub_list = sub_data[1:-1].split(",")
+                        for sub_d in sub_list:
+                            if not are_key_value_valid(d):
+                                return False
+                    else:
+                       if not are_key_value_valid(sub_data[1:-1]):
+                            return False
+
+                    while True:
+                        if start != end:
+                            jd_list.pop(end)
+                            end -= 1
+                        else:
+                            break
+
+            elif not are_key_value_valid(d):
+                return False
 
     return is_valid
+
 
 def main():
 
