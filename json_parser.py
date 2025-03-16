@@ -1,4 +1,8 @@
+import string
 import sys
+
+# TODO: Future refactor to handle multiple dicts as values embedded inside dicts or list
+# TODO: Add validation to check for correct punctuation
 
 def clean_data(json_file):
     clean_list = list() # declare new clean list
@@ -18,7 +22,7 @@ def clean_data(json_file):
 
     return clean_list
 
-def list_value(data_list):
+def convert_to_list(data_list):
 
     if "[" in data_list:
         x = data_list.index("]") # get index of the end of the dict
@@ -58,7 +62,7 @@ def create_dict(data_list):
     return value
 
 # Reconstruct json value that is a dictionary
-def dict_value(data_list):
+def convert_to_dict(data_list):
 
     if "{" in data_list:
         x = data_list.index("}") # get index of the end of the dict
@@ -76,20 +80,51 @@ def dict_value(data_list):
 
     return data_list
 
+def is_valid_json(data):
+
+    is_valid = True
+
+    with open(data, 'r') as j_data:
+        jd = j_data.read().strip() # set data to jd
+
+        if jd == "": # Return false for empty file
+            return False
+
+        if jd[0] == "{" and jd[-1] == "}": # Verify json starts/ends {}
+            if len(jd) == 2: # Return true for empty json
+                return True
+
+        # Return false if invalid punctuation at end of file
+        if jd[-2] in string.punctuation:
+            if jd[-2] != '"' and jd[-2] != '}' and jd[-2] != ']':
+                return False
+
+        jd_list = jd[1:-1].strip().strip(" ,:\n").split(' ') # Create list remove unneeded punctuation
+
+        for d in jd_list:
+            if d == "": # skip empty list item
+                continue
+            elif d.count('"') != 2: # Make sure each item has two " symbols
+                d = d.strip(" ,\n") # Clean data further
+                if d not in ['true', 'null', 'false']: # Check if data is boolean or null
+                    if not d.isdigit(): # check if data is digit
+                        return False
 
 
+    return is_valid
 
 def main():
 
-    data_list = clean_data(sys.argv[1])
-    print(data_list)
-    data_list = dict_value(data_list)
-    data_list = list_value(data_list)
-    data_dict = create_dict(data_list)
-
-    print("--------------------------------------------------")
-    print(data_dict)
-
+    data_list = sys.argv[1]
+    if is_valid_json(data_list):
+        print(0, end=" ")
+        data_list = clean_data(data_list)
+        data_list = convert_to_dict(data_list)
+        data_list = convert_to_list(data_list)
+        data_dict = create_dict(data_list)
+        print(data_dict)
+    else:
+        print(1)
 
 
 
