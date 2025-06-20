@@ -1,0 +1,23 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+*.pyd
+
+# Unit test / coverage / pytest stuff
+.cache/
+.tox/
+.pytest_cache/
+.coverage
+coverage.xml
+
+# Virtual environments
+env/
+venv/
+.venv/
+.idea/
+
+# OS-specific
+.DS_Store
+Thumbs.db

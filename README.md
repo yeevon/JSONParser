@@ -340,6 +340,7 @@ def main():
 ## Step 5
 Pass all 36 test scenarios in test/ folder
 
+Still stuck with step five. I feel like I'm still coding to defensively for this challenge. I know I have to handle the splits for list and dictionaries more delicatly and not rely on the string split function. (since some values can have : and , aswell). I also need to clean up on how and when i'm doing validation to kick for system exit 1. I have a few ideas on how to get it to work. But, think its best to step away for a while and talckle this again later. 6/20/2025
 ## Done
 ```python
 
