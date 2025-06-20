@@ -1,196 +1,196 @@
-import string
-import sys
+import sys, json
 
-# TODO: Future refactor to handle multiple dicts as values embedded inside dicts or list
-# TODO: Add validation to check for correct punctuation
-# TODO: code clean up
+def easy_parse_json(file_name):
+    
+    try:
+        with open(file_name, 'r') as test_file:
+            data_dict = json.load(test_file)
+    except json.JSONDecodeError:
+        print("Invalid Json")
+        sys.exit(1)
 
-def clean_data(json_file):
-    clean_list = list() # declare new clean list
+    print(f'Valid Json: {data_dict}')
+    sys.exit(0)
 
-    with open(json_file, 'r') as f: # read json file
-        json_data = f.read().strip() # strip json data of leading and trailing spaces
+def in_string_switch(bool_val):
+    return False if bool_val else True
 
-        data_list = json_data[1:-1].split('"') # remove json curly braces and split list based on "
+def split_data(data, split_val):
+    char_collector = ''
+    data_list = []
+    depth = 0
+    in_string = False
+    data_dict = {}
+    key = "" 
 
-        for data in data_list:  # Loop to create cleaned list
+    if split_val == ',':
+        for _char in data:
 
-            # Data clean up removing spaces, commas, colons and returns
-            data = data.strip(" ,:\n")
-            if data == "":
-                continue
-            clean_list.append(data)
+            if depth > 18:
+                sys.exit(1)
 
-    return clean_list
+            if _char in '{[':
+                depth += 1
+            elif _char in ']}':
+                depth -= 1
 
-def convert_to_list(data_list):
+            if _char == '"':
+                in_string = in_string_switch(in_string)
 
-    if "[" in data_list:
-        x = data_list.index("]") # get index of the end of the dict
-        sub_list = data_list[data_list.index("[") + 1: x] # create sublist of items in the dictionary
+            if _char == split_val and depth == 0 and not in_string:
+                data_list.append(char_collector)
+                char_collector = ""
+            else:
+                if _char:
+                    char_collector += _char
 
-        value = list() # declare new dictionary
-        for data in sub_list: # loop through sublist and add items to new dictionary
-            value.append(data) # add key value to dictionary
+        data_list.append(char_collector)
 
-        while True: # Loop in reverse to recreate the list
-            if data_list[x] == "[": # check if back at the beginning of the dictionary
-                data_list[x] = value # replace with new dictionary created
-                break
+        return data_list
+    else:
+        for _char in data:
 
-            data_list.pop(x) # remove list items that are part of constructed dictionary
-            x -= 1
-    return data_list
+            if _char in '{[':
+                depth += 1
+            elif _char in ']}':
+                depth -= 1
 
-def create_dict(data_list):
-    value = dict()  # declare new dictionary
-    for index, data in enumerate(data_list):  # loop through sublist and add items to new dictionary
-        if index % 2 == 0:  # if loop on key skip to next item
+            if _char == '"':
+                in_string = in_string_switch(in_string)
+
+            if _char == split_val and depth == 0 and not in_string:
+                if split_val == ':':
+                    key = char_collector
+                    split_val = ','
+                else:
+                    split_val = ':'
+                    data_dict[key] = char_collector
+                char_collector = ""
+            else:
+                if _char:
+                    char_collector += _char
+
+        data_dict[key] = char_collector
+        return data_dict
+
+def is_valid_key(key_list):
+    for key in key_list:
+        if key == '0' or key.isdigit():
             continue
 
-        # add key value to dictionary
-        if isinstance(data, str) and data.isdigit():
-            value[data_list[index - 1]] = int(data)
-        elif data == "true":
-            value[data_list[index - 1]] = True
-        elif data == "false":
-            value[data_list[index - 1]] = False
-        elif data == "null":
-            value[data_list[index - 1]] = None
-        else:
-            value[data_list[index - 1]] = data
-
-    return value
-
-# Reconstruct json value that is a dictionary
-def convert_to_dict(data_list):
-
-    if "{" in data_list:
-        x = data_list.index("}") # get index of the end of the dict
-        sub_list = data_list[data_list.index("{") + 1: x] # create sublist of items in the dictionary
-
-        value = create_dict(sub_list)
-
-        while True: # Loop in reverse to recreate the list
-            if data_list[x] == "{": # check if back at the beginning of the dictionary
-                data_list[x] = value # replace with new dictionary created
-                break
-
-            data_list.pop(x) # remove list items that are part of constructed dictionary
-            x -= 1
-
-    return data_list
-
-
-def are_key_value_valid(d):
-    if d.count('"') != 2:  # Make sure each item has two " symbols
-        if d not in ['true', 'null', 'false']:  # Check if data is boolean or null
-            if not d.isdigit():  # check if data is digit
-                return False
+        if key.count('"') != 2:
+            return False
+        
     return True
 
+def is_valid_int(num):
+    try:
+        int(num)
+        return True
+    except ValueError:
+        return False
 
-def is_valid_json(data):
+def is_valid_value(value_list):
+    is_True = True
+    for value in value_list:
+        value = value.strip()
 
-    is_valid = True
-
-    with open(data, 'r') as j_data:
-        jd = j_data.read().strip() # set data to jd
-
-        if jd == "": # Return false for empty file
-            return False
-
-        if jd[0] == "{" and jd[-1] == "}": # Verify json starts/ends {}
-            if len(jd) == 2: # Return true for empty json
-                return True
-
-        # Return false if invalid punctuation at end of file
-        if jd[-2] in string.punctuation:
-            if jd[-2] != '"' and jd[-2] != '}' and jd[-2] != ']':
+        if ':' in value:
+            print(12)
+            if '{' not in value and '}' not in value:
                 return False
+            
+        if value in ['[]', '{}']:
+            print(5)
+            continue
+        elif value[0] in '[' and value[-1] in ']':
+            print(6)
+            if not is_valid_value(split_data(value[1:-1])):
+                is_True = False
+        elif value[0] in '{' and value[-1] in '}':
+            print(7)
+            if ',' in value:
+                hard_parse_json(value.strip())
+            else:
+                new_dict = convert_to_dict([value.strip()])
+                if not is_valid_key(new_dict.keys()) or not is_valid_value(new_dict.values()):
+                    is_True = False
+        elif value in ['true', 'false', 'null']:
+            print(8)
+            continue
+        elif value == 0 or (not value.startswith('0') and (value.isdigit() or is_valid_int(value))):
+            print(9)
+            continue
+        elif value.count('"') == 2:
+            print(10)
+            continue
+        else:
+            print(11)
+            is_True = False
 
-        jd_list = jd[1:-1].strip().split(' ') # Create list
+    return is_True
 
-        # clean and rebuild list
-        sub_list = list()
-        for d in jd_list:
-            if d == "": # skip empty list item
-                continue
+def convert_to_dict(data):
+    return {
+        key.strip():value.strip()
+        for key,value in (d.split(':', 1) for d in data)
+    }
 
-            d = d.strip(" ,\n")  # Strip unneeded characters from data
-            sub_list.append(d)
-        jd_list = sub_list
+def hard_parse_json(file_or_data):
 
+    if file_or_data.strip().startswith('{') or file_or_data.strip().startswith('['):
+        data = file_or_data
+    else:
+        with open(file_or_data, 'r') as test_file:
+            data = test_file.read()
 
-        for d in jd_list:
-            print("-------------------------------")
-            print(d)
-            if "{" in d: # Check if value is valid json
-                if d != "{}":  # Make sure json not empty
-                    x = jd_list.index("}")
-                    sub_data = " ".join(jd_list[jd_list.index(d):  x + 1]) # get json value and undo split
-                    sub_json = sub_data[1:-1].split(':')  # split based on semicolon
+    data = data.strip()
 
-                    for sub_d in sub_json: # step through json make sure values are valid
-                        if not are_key_value_valid(sub_d):
-                            return False
+    # Make sure there is data
+    if not data:
+        print(1)
+        sys.exit(1)
+    elif data == '{}':
+        sys.exit(0)
 
-                    # if json is valid remove already validated items from data list
-                    while True:
-                        if jd_list[x] != "{":
-                            jd_list.pop(x)
-                            x -= 1
-                        else:
-                            break
+    valid_json = data[0] + data[-1]
+    
+    if valid_json not in ['{}', '[]']:
+        print(2)
+        sys.exit(1)
+    
+    if valid_json == '[]':
+        if is_valid_value([data]):
+            sys.exit(0)
+        else:
+            sys.exit(1)
 
-            elif "[" in d: # Check if data is a valid list
-                if d != "[]":  # make sure list not empty
-                    x = [i for i, item in enumerate(jd_list) if "]" in item]
+    data = data[1:-1]
+    data_list = list(split_data(data))
 
-                    start = jd_list.index(d)
-                    end = x[0]
+    for d in data_list:
+        if not d or not (':' in d) :
+            print(3)
+            sys.exit(1)
 
-                    sub_data = " ".join(jd_list[start:  end + 1])  # get list value and undo split
+    data_dict = convert_to_dict(data_list)
+    print(data_dict)
+    print("<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+    print(is_valid_key(data_dict.keys()))
+    if not is_valid_key(data_dict.keys()) or not is_valid_value(data_dict.values()):
+        print(4)
+        sys.exit(1)
 
-
-                    if "," in sub_data: # split and loop if multiple list items
-                        sub_list = sub_data[1:-1].split(",")
-                        for sub_d in sub_list:
-                            if not are_key_value_valid(d):
-                                return False
-                    else:
-                       if not are_key_value_valid(sub_data[1:-1]):
-                            return False
-
-                    while True:
-                        if start != end:
-                            jd_list.pop(end)
-                            end -= 1
-                        else:
-                            break
-
-            elif not are_key_value_valid(d):
-                return False
-
-    return is_valid
-
+    sys.exit(0)
 
 def main():
 
-    data_list = sys.argv[1]
-    if is_valid_json(data_list):
-        print(0, end=" ")
-        data_list = clean_data(data_list)
-        data_list = convert_to_dict(data_list)
-        data_list = convert_to_list(data_list)
-        data_dict = create_dict(data_list)
-        print(data_dict)
-    else:
-        print(1)
-
-
-
+    file_name = sys.argv[1]
+    print(file_name)
+    # Easy mode
+    # easy_parse_json(file_name)
+    # Hard mode
+    hard_parse_json(file_name)
 
 if __name__ == "__main__":
-
     main()
